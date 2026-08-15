@@ -2,6 +2,10 @@
 
 add_newline = false
 scan_timeout = 1000
+# custom.rainbow below is a pure-zsh, zero-fork script, so it should never come
+# close to this — kept as a safety margin, matching scan_timeout, so a slow
+# cold-cache moment doesn't print a spurious "Executing command ... timed out".
+command_timeout = 1000
 
 format = """
 ${custom.rainbow}\

@@ -29,7 +29,7 @@
 
             # --- core utilities configs/scripts assume on PATH ---
             coreutils # GNU ls/etc. — makes `ls --color` + LS_COLORS work everywhere
-            gawk # rainbow-prompt / tmux-rainbow sine-wave gradients
+            gawk # POSIX-ish awk for various .local/bin scripts (netbench, tmux-sessionizer, etc.)
             gnused
             stow # keep the non-nix stow install path working too
             nerd-fonts.symbols-only # glyph icons for prompt + yazi

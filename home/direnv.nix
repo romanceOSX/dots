@@ -7,14 +7,29 @@
 # eval cache so entering a flake dir doesn't re-evaluate every time.
 #
 # The shell hook is wired automatically for whichever shells are enabled.
-{ ... }:
+{
+  pkgs,
+  lib,
+  config,
+  ...
+}:
+let
+  # Same reasoning as shell.nix's cachedShellInit: `direnv hook zsh` is a pure
+  # function of the pinned binary, so generate it once at build time instead
+  # of live-forking direnv on every shell startup.
+  cachedDirenvInit = pkgs.runCommand "cached-direnv-init" { } ''
+    ${lib.getExe config.programs.direnv.package} hook zsh > $out
+  '';
+in
 {
   programs.direnv = {
     enable = true;
     nix-direnv.enable = true;
 
-    # Shell init hooks — Home Manager injects `eval "$(direnv hook <shell>)"`.
-    enableZshIntegration = true;
+    # Zsh hook is sourced from `cachedDirenvInit` (build-time cache, above)
+    # instead of the live enableZshIntegration eval. Bash/fish still use HM's
+    # normal live eval — only zsh startup time was in scope here.
+    enableZshIntegration = false;
     enableBashIntegration = true;
     enableFishIntegration = true;
 
@@ -33,4 +48,10 @@
     # directory that has a .env (and no .envrc) exports its vars automatically.
     config.global.load_dotenv = true;
   };
+
+  # direnv's own hook, using the build-time cache above (mkAfter to land after
+  # any prompt manipulation elsewhere, matching HM's own direnv module).
+  programs.zsh.initContent = lib.mkAfter ''
+    source "${cachedDirenvInit}"
+  '';
 }
