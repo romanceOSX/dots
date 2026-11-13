@@ -144,6 +144,7 @@
             nmap # port scanner
             sshm # SSH bookmark manager
             assh # SSH proxy/wrapper with advanced config
+            freerdp # RDP client — use `sdl-freerdp` on macOS (xfreerdp needs XQuartz)
 
             # --- cloud ---
             azure-cli # `az` — Azure CLI (Python-based, cross-platform)

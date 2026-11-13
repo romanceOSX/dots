@@ -118,6 +118,10 @@
       source = ../.local/bin/devtunnel-ssh-proxy;
       executable = true;
     };
+    ".local/bin/devtunnel-rdp" = {
+      source = ../.local/bin/devtunnel-rdp;
+      executable = true;
+    };
   }
   # WSL-only helpers — keep these off macOS so they don't bloat that config.
   // lib.optionalAttrs isWSL {

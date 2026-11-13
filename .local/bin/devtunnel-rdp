@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# RDP to a host behind a Microsoft Dev Tunnel.
+#
+#   devtunnel-rdp <tunnel-id> [extra freerdp args...]
+#   e.g. devtunnel-rdp my-tunnel.use2 /u:me /size:1920x1080
+#
+# Runs `devtunnel connect <id>`, waits for the forwarded 127.0.0.1:PORT, points
+# FreeRDP at it, and tears the tunnel down when the RDP window closes. RDP
+# sibling of devtunnel-ssh-proxy. Prefers sdl-freerdp (native on macOS);
+# falls back to xfreerdp (WSLg/X11).
+set -u
+
+TUNNEL_NAME="${1:?usage: devtunnel-rdp <tunnel-id> [freerdp args...]}"
+shift
+
+if command -v sdl-freerdp >/dev/null; then
+    RDP=sdl-freerdp
+elif command -v xfreerdp >/dev/null; then
+    RDP=xfreerdp
+else
+    echo "devtunnel-rdp: no FreeRDP client (sdl-freerdp/xfreerdp) on PATH" >&2
+    exit 1
+fi
+
+tmpout="$(mktemp -t devtunnel-rdp.XXXXXX)"
+devtunnel connect "$TUNNEL_NAME" > "$tmpout" 2>&1 &
+TUNNEL_PID=$!
+trap 'kill $TUNNEL_PID 2>/dev/null; rm -f "$tmpout"' EXIT INT TERM
+
+PORT=""
+for _ in {1..150}; do
+    PORT=$(grep "Forwarding from" "$tmpout" | sed -n 's/.*127\.0\.0\.1:\([0-9]*\).*/\1/p' | head -n 1)
+    [ -n "$PORT" ] && break
+    if ! kill -0 $TUNNEL_PID 2>/dev/null; then
+        echo "devtunnel process died. Output:" >&2
+        cat "$tmpout" >&2
+        exit 1
+    fi
+    sleep 0.2
+done
+
+if [ -z "$PORT" ]; then
+    # Connected but no port: the tunnel host isn't forwarding (e.g. the port was
+    # added after `devtunnel host` started — restart the host process).
+    echo "Timed out waiting for devtunnel port forward. Output:" >&2
+    cat "$tmpout" >&2
+    exit 1
+fi
+
+echo "Tunnel up on 127.0.0.1:$PORT — launching $RDP" >&2
+"$RDP" /v:127.0.0.1:"$PORT" /cert:ignore /dynamic-resolution "$@"
